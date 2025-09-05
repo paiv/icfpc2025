@@ -6,5 +6,5 @@ Team: paiv
 
 https://icfpcontest2025.github.io/
 
-<!--img src="docs/screenshot.png" width="240"/ -->
+<img src="docs/screenshot.svg" width="240"/>
 
