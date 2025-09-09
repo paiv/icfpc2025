@@ -49,16 +49,14 @@ class _State:
                 if i > 2:
                     r1 = bytes(plan[:i-2])
                     r2 = bytes(plan[:i-3])
-                    s1 = self.sigs.get(r1)
                     s2 = self.sigs.get(r2)
-                    if (s1 is not None) and (s2 is not None):
-                        if s2 == s0:
-                            self.doors[r0].add(r1)
-                            self.doors[r1].add(r0)
+                    if s2 == s0:
+                        self.doors[r0].add(r1)
+                        self.doors[r1].add(r0)
 
     def fromsig(self, sig):
-        g = (k for k,q in self.sigs.items() if q == sig)
-        return next(g, None)
+        gs = [k for k,q in self.sigs.items() if q == sig]
+        return min(gs, key=len, default=None)
 
     def equiv(self, a):
         if (s := self.sigs.get(a)) is None:
@@ -96,11 +94,15 @@ class _State:
 
 
 class _Planner:
+    def __init__(self):
+        self.total = 0
+
     def plan(self, state, ts):
         if ts == 0:
-            n = state.size
-            plans = [[random.randrange(6) for _ in range(18 * n)]
-                for _ in range(3)]
+            size = state.size
+            plans = [[random.randrange(6) for _ in range(18 * size)]
+                for _ in range(2)]
+            self.total += 1 + len(plans)
             return plans
 
         plans = list()
@@ -115,6 +117,7 @@ class _Planner:
             else:
                 for i in range(6):
                     fringe.append(a + bytes([i]))
+        self.total += 1 + len(plans)
         return plans
 
 
@@ -129,5 +132,5 @@ def solve(api, size):
         cons = state.connections()
         if cons: break
     _logger.debug('connections %s', cons)
-    _logger.info('%s waves', t+1)
+    _logger.info('%s queries', planner.total)
     return cons
