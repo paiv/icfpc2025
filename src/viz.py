@@ -1,16 +1,33 @@
 #!/usr/bin/env python
+import json
 import re
 import string
 import textwrap
 
 
+def parsecons(text):
+    cons = None
+    try:
+        cons = json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    if cons is None:
+        xs = list(map(int, re.findall(r'\d+', text)))
+        cons = [((a,i),(b,j)) for p in range(0, len(xs), 4)
+            for a,i,b,j in [xs[p:p+4]]]
+    elif isinstance(cons, dict):
+        cons = cons.get('map', cons)
+        cons = cons['connections']
+    if cons and isinstance(cons[0], dict):
+        cons = [((o['from']['room'], o['from']['door']),
+            (o['to']['room'], o['to']['door'])) for o in cons]
+    return cons
+
+
 def main(args):
     text = args.input.read()
-    xs = list(map(int, re.findall(r'\d+', text)))
-    ps = xs[0::4]
-    pi = xs[1::4]
-    qt = xs[2::4]
-    qj = xs[3::4]
+    cons = parsecons(text)
+    rooms = {x for (a,i),(b,j) in cons for x in [a,b]}
     tdoc = '''\
 graph {
   bgcolor = "#202124";
@@ -26,9 +43,9 @@ $edges
     troom = 'room$a [label = "<f0> Room $a|<f1> 0|<f2> 1|<f3> 2|<f4> 3|<f5> 4|<f6> 5"];'
     tedge = 'room$a:f$i -- room$b:f$j [color = "$c 0.80 0.95 0.75"];'
     rooms = [string.Template(troom).substitute(a=a)
-        for a in set(ps + qt)]
+        for a in rooms]
     edges = list()
-    for a,i,b,j in zip(ps, pi, qt, qj):
+    for (a,i),(b,j) in cons:
         c = round(((i+1) * (j+1)) % 8 / 8, 3)
         edges.append(string.Template(tedge)
             .substitute(a=a, i=i+1, b=b, j=j+1, c=c))

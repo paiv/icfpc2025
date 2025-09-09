@@ -9,7 +9,7 @@ from pathlib import Path
 from urllib.parse import urljoin
 
 
-_baseurl = 'https://31pwr5t6ij.execute-api.eu-west-2.amazonaws.com/'
+_DefaultUrl = 'https://31pwr5t6ij.execute-api.eu-west-2.amazonaws.com/'
 _logger = logging.getLogger(Path(__file__).name)
 
 
@@ -29,7 +29,7 @@ def fproc(filt, prog, *args, **kwargs):
 
 
 class ApiClient:
-    def __init__(self, baseurl=_baseurl, timeout=30):
+    def __init__(self, baseurl, timeout=30):
         self.ses = requests.Session()
         self.baseurl = baseurl
         self.timeout = timeout
@@ -103,7 +103,7 @@ class ApiClient:
 
 
 def handle_select(args):
-    api = ApiClient()
+    api = ApiClient(args.url)
     api.select(args.pid)
 
 
@@ -112,7 +112,7 @@ def handle_solve(args):
         parser.error('argument -s/--solver: requires a value')
     solver = __import__(args.solver)
     size = args.size
-    api = ApiClient()
+    api = ApiClient(args.url)
     rooms, start, cons = solver.solve(api, size)
     res = api.guess(rooms=rooms, start=start, connections=cons)
     print(res)
@@ -123,7 +123,7 @@ def handle_snipe(args):
         parser.error('argument -s/--solver: requires a value')
     solver = __import__(args.solver)
     size = args.size
-    api = ApiClient()
+    api = ApiClient(args.url)
     api.select(args.pid)
     rooms, start, cons = solver.solve(api, size)
     res = api.guess(rooms=rooms, start=start, connections=cons)
@@ -138,7 +138,7 @@ def handle_cheese(args):
     if not args.cheeser:
         parser.error('argument -c/--cheeser: requires a value')
     cheeser = __import__(args.cheeser)
-    api = ApiClient()
+    api = ApiClient(args.url)
     res = cheeser.cheese(solver, api, args.pid, args.size)
     print(res)
 
@@ -149,6 +149,8 @@ if __name__ == '__main__':
     subps = parser.add_subparsers(required=True)
     parser.add_argument('-v', '--verbose', action='count', default=0,
         help='verbose output (-vvv)')
+    parser.add_argument('-u', '--url', default=_DefaultUrl,
+        help='base URL (default %(default)s)')
     parser.add_argument('-s', '--solver', help='solver module')
     parser.add_argument('-c', '--cheeser', help='cheesing module')
 
