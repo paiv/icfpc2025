@@ -109,6 +109,8 @@ class RequestHandler (http.server.BaseHTTPRequestHandler):
             if method != 'POST': continue
             if (m := rx.search(rpath)):
                 h = self.headers.get('content-type')
+                if h is not None:
+                    h,*_ = h.split(';')
                 if h not in ('application/x-www-form-urlencoded', 'application/json'):
                     return self.send_error(400, explain=f'No handler for {h}')
                 n = int(self.headers.get('content-length', -1))
@@ -137,6 +139,20 @@ def _genlighting(size):
     random.shuffle(names)
     doors = set(doors)
     cons = list()
+    trunk = list(range(1, size))
+    random.shuffle(trunk)
+    for s in trunk:
+        while True:
+            a = random.choice([(s-1, i) for i in range(6)])
+            if a in doors:
+                doors.remove(a)
+                break
+        while True:
+            b = random.choice([(s, i) for i in range(6)])
+            if b in doors:
+                doors.remove(b)
+                break
+        cons.append((a, b))
     while doors:
         a = doors.pop()
         if not doors or random.random() < 0.1:

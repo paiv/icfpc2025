@@ -7,6 +7,7 @@ import textwrap
 
 def parsecons(text):
     cons = None
+    rooms = None
     try:
         cons = json.loads(text)
     except json.JSONDecodeError:
@@ -17,16 +18,17 @@ def parsecons(text):
             for a,i,b,j in [xs[p:p+4]]]
     elif isinstance(cons, dict):
         cons = cons.get('map', cons)
+        rooms = cons.get('rooms')
         cons = cons['connections']
     if cons and isinstance(cons[0], dict):
         cons = [((o['from']['room'], o['from']['door']),
             (o['to']['room'], o['to']['door'])) for o in cons]
-    return cons
+    return (rooms, cons)
 
 
 def main(args):
     text = args.input.read()
-    cons = parsecons(text)
+    labels, cons = parsecons(text)
     rooms = {x for (a,i),(b,j) in cons for x in [a,b]}
     tdoc = '''\
 graph {
@@ -40,10 +42,11 @@ $rooms
 $edges
 }\
 '''
-    troom = 'room$a [label = "<f0> Room $a|<f1> 0|<f2> 1|<f3> 2|<f4> 3|<f5> 4|<f6> 5"];'
+    troom = 'room$a [label = "<f0> Room $a$k|<f1> 0|<f2> 1|<f3> 2|<f4> 3|<f5> 4|<f6> 5"];'
     tedge = 'room$a:f$i -- room$b:f$j [color = "$c 0.80 0.95 0.75"];'
-    rooms = [string.Template(troom).substitute(a=a)
-        for a in rooms]
+    rooms = [string.Template(troom).substitute(a=a, k=k)
+        for a in rooms
+        for k in [f' ({labels[a]})' if labels else '']]
     edges = list()
     for (a,i),(b,j) in cons:
         c = round(((i+1) * (j+1)) % 8 / 8, 3)
