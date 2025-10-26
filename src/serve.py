@@ -46,7 +46,8 @@ def send_error(request, body, code=400):
 @route(r'/select', method='POST')
 def process_select(request, query, post):
     name = post.get('problemName')
-    prob = genproblem(name)
+    seed = post.get('seed')
+    prob = genproblem(name, seed=seed)
     _Env['problem'] = None
     _Env['total'] = 0
     if not prob:
@@ -128,34 +129,36 @@ class RequestHandler (http.server.BaseHTTPRequestHandler):
             self.send_error(404, explain=f'No route for {self.path!r}')
 
 
-def _genlighting(size):
+def _genlighting(size, seed=None):
+    rng = random.Random(seed)
     rooms = list(range(size))
     doors = [(a, i) for a in rooms for i in range(6)]
     names = list(range(4))
-    random.shuffle(rooms)
-    random.shuffle(doors)
-    random.shuffle(names)
+    trunk = list(range(size))
+    rng.shuffle(rooms)
+    rng.shuffle(doors)
+    rng.shuffle(names)
+    rng.shuffle(trunk)
     names = (names * ((size + 3) // 4))[:size]
-    random.shuffle(names)
+    rng.shuffle(names)
     doors = set(doors)
     cons = list()
-    trunk = list(range(1, size))
-    random.shuffle(trunk)
-    for s in trunk:
+    for (j, s) in enumerate(trunk[1:], 1):
+        t = rng.choice(trunk[:j])
         while True:
-            a = random.choice([(s-1, i) for i in range(6)])
+            a = rng.choice([(t, i) for i in range(6)])
             if a in doors:
                 doors.remove(a)
                 break
         while True:
-            b = random.choice([(s, i) for i in range(6)])
+            b = rng.choice([(s, i) for i in range(6)])
             if b in doors:
                 doors.remove(b)
                 break
         cons.append((a, b))
     while doors:
         a = doors.pop()
-        if not doors or random.random() < 0.1:
+        if not doors or rng.random() < 0.1:
             b = a
         else:
             b = doors.pop()
@@ -163,18 +166,18 @@ def _genlighting(size):
     cons = [((rooms.index(a), i), (rooms.index(b), j)) for (a,i),(b,j) in cons]
     cons = [{'from':dict(room=a, door=i), 'to':dict(room=b, door=j)}
         for (a,i),(b,j) in cons]
-    start = random.randrange(size)
+    start = rng.randrange(size)
     return dict(rooms=names, startingRoom=start, connections=cons)
 
 
-def genproblem(name):
+def genproblem(name, /, seed=None):
     if not name: return
     problems = _Env['problems']
     params = problems.get(name)
     if not params: return
     size, kind = params
     if kind == 'l':
-        return _genlighting(size)
+        return _genlighting(size, seed)
 
 
 def parsegrid(prob):
